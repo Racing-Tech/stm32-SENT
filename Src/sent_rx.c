@@ -23,7 +23,7 @@ HAL_TIM_ActiveChannel SENTRx_getActiveChannel(uint32_t channel) {
     return ch;
 }
 
-uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTRxCallback_t rx_callback) {
+uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTRxCallback_t rx_callback,  GPIO_TypeDef *output_port, uint32_t output_pin) {
     if(handle == NULL || htim == NULL)
         return 0;
 
@@ -35,6 +35,8 @@ uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim,
     handle->captures[0] = 0;
     handle->captures[1] = 0;
     handle->state = SENTRX_STATE_IDLE;
+    handle->output_port = output_port;
+    handle->output_pin = output_pin;
 
     __HAL_TIM_SET_AUTORELOAD(handle->base.htim, TIM_GET_MAX_AUTORELOAD(handle->base.htim));
     __HAL_TIM_CLEAR_FLAG(handle->base.htim, TIM_FLAG_UPDATE);
@@ -55,7 +57,7 @@ uint8_t SENTRx_getRxMessage(SENTRxHandle_t *const handle, SENTMsg_t *const messa
 void SENTRx_InputCaptureCallback(SENTRxHandle_t *const handle) {
     uint32_t oldCapture;
     if(handle->base.htim->Channel == SENTRx_getActiveChannel(handle->base.channel)) {
-        if(HAL_GPIO_ReadPin(TIM2_CH1_GPIO_Port, TIM2_CH1_Pin) == GPIO_PIN_SET) {
+        if(HAL_GPIO_ReadPin(handle->output_port, handle->output_pin) == GPIO_PIN_SET) {
             handle->captures[1] = HAL_TIM_ReadCapturedValue(handle->base.htim, handle->base.channel);
             return;
         }
