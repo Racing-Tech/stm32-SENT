@@ -39,6 +39,6 @@ typedef struct {
 } SENTHandle_t;
 
 void SENT_message_init(SENTMsg_t *const message, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
-uint8_t SENT_calc_crc(uint8_t *const data, uint8_t length);
+uint8_t SENT_calc_crc(SENTMsg_t *const message);
 
 #endif // SENT_H
