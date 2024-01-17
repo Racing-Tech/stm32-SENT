@@ -13,9 +13,11 @@
 typedef struct {
     SENTHandle_t base;
     SENTMsg_t *message;
+    SENTSlowMsg_t *slow_message;
 } SENTTxHandle_t;
 
 uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel);
+uint8_t SENTTx_add_slow_msg(SENTTxHandle_t *const handle, SENTSlowMsg_t *const message);
 uint8_t SENTTx_send(SENTTxHandle_t *const handle, SENTMsg_t *const message);
 void SENTTx_AutoReloadCallback(SENTTxHandle_t *const handle);
 void SENTTx_CompareCallback(SENTTxHandle_t * const handle);

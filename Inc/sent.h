@@ -23,6 +23,8 @@
 #define SENT_TIM_TO_TICKS(tim, ticks, unit) (TIM_TICKS_TO_MS((tim), (ticks))/(unit))
 
 typedef enum {SENT_READY, SENT_TX, SENT_RX, SENT_NOT_READY} SENTHandleStatus_t;
+typedef enum {SENT_SLOWTYPE_SHORT, SENT_SLOWTYPE_ENHANCED12, SENT_SLOWTYPE_ENHANCED16} SENTSlowMsgType_t;
+typedef enum {SENT_SLOW_IDLE, SENT_SLOW_RX, SENT_SLOW_RX_SHORT, SENT_SLOW_RX_ENHANCED, SENT_SLOW_RX_ENHANCED_12, SENT_SLOW_RX_ENHANCED_16, SENT_SLOW_TX} SENTSlowStatus_t;
 
 typedef struct {
     uint8_t status_nibble;
@@ -32,10 +34,28 @@ typedef struct {
 } SENTMsg_t;
 
 typedef struct {
+    SENTSlowMsgType_t type;
+    union {
+        struct {
+            uint16_t crc :4;
+            uint16_t data :8;
+            uint16_t id   :4;
+        } slow_short;
+        struct {
+            uint8_t crc;
+            uint16_t data;
+            uint8_t id;
+        } slow_enhanced;
+    } as;
+} SENTSlowMsg_t;
+
+typedef struct {
     SENTHandleStatus_t status;
     uint8_t index;
     TIM_HandleTypeDef *htim;
     uint32_t channel;
+    SENTSlowStatus_t slow_channel_status;
+    uint8_t slow_channel_index;
 } SENTHandle_t;
 
 void SENT_message_init(SENTMsg_t *const message, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
