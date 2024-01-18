@@ -126,10 +126,11 @@ void SENTRx_SlowChannelFSM(SENTRxHandle_t *const handle, uint8_t status) {
         break;
 
     case SENT_SLOW_RX_ENHANCED:
-        if(handle->base.slow_channel_index == 7 && handle->slow_channel_buffer_bit3)
-            handle->base.slow_channel_status = SENT_SLOW_RX_ENHANCED_12;
-        else
-            handle->base.slow_channel_status = SENT_SLOW_RX_ENHANCED_16;
+        if(handle->base.slow_channel_index == 7)
+            if(handle->slow_channel_buffer_bit3)
+                handle->base.slow_channel_status = SENT_SLOW_RX_ENHANCED_12;
+            else
+                handle->base.slow_channel_status = SENT_SLOW_RX_ENHANCED_16;
         break;
 
     case SENT_SLOW_RX_ENHANCED_12:

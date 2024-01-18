@@ -65,21 +65,52 @@ void SENTTx_SlowChannelFSM(SENTTxHandle_t *const handle, SENTMsg_t *const msg, S
         switch (slow_msg->type)
         {
         case SENT_SLOWTYPE_SHORT:
-            msg->status_nibble &= ~(0b1100);
-
             if(handle->base.slow_channel_index >= 16)
                 handle->base.slow_channel_status = SENT_SLOW_IDLE;
+
+            msg->status_nibble &= ~(0b1100);
 
             if(handle->base.slow_channel_index == 0)
                 msg->status_nibble |= 1 << 3;
             
-            msg->status_nibble |= ((*((uint16_t*)(&slow_msg->as.slow_short)) >> (15-handle->base.slow_channel_index)) << 2) & 0x04;
+            msg->status_nibble |= ((*((uint16_t*)(&slow_msg->as.slow_short)) >> (15-handle->base.slow_channel_index)) << 2) & 0x4;
             break;
         case SENT_SLOWTYPE_ENHANCED12:
-            /* code */
+            if(handle->base.slow_channel_index >= 18)
+                handle->base.slow_channel_status = SENT_SLOW_IDLE;
+
+            msg->status_nibble &= ~(0b1100);
+
+            if(handle->base.slow_channel_index < 6)
+                msg->status_nibble |= 1 << 3;
+            else if(handle->base.slow_channel_index >= 8 && handle->base.slow_channel_index < 12)
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.id >> (7+7-handle->base.slow_channel_index)) << 2) & 0x8;
+            else if(handle->base.slow_channel_index >= 13 && handle->base.slow_channel_index < 17)
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.id >> (3+12-handle->base.slow_channel_index)) << 2) & 0x8;
+            
+            if(handle->base.slow_channel_index < 6)
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.crc >> (5-handle->base.slow_channel_index)) << 2) & 0x4;
+            else
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.data >> (11+6-handle->base.slow_channel_index)) << 2) & 0x4;
             break;
         case SENT_SLOWTYPE_ENHANCED16:
-            /* code */
+            if(handle->base.slow_channel_index >= 22)
+                handle->base.slow_channel_status = SENT_SLOW_IDLE;
+
+            msg->status_nibble &= ~(0b1100);
+
+            if(handle->base.slow_channel_index < 6)
+                msg->status_nibble |= 1 << 3;
+            else if(handle->base.slow_channel_index >= 8 && handle->base.slow_channel_index < 12)
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.id >> (7+7-handle->base.slow_channel_index)) << 2) & 0x8;
+            else if(handle->base.slow_channel_index >= 13 && handle->base.slow_channel_index < 17)
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.id >> (3+12-handle->base.slow_channel_index)) << 2) & 0x8;
+            
+            if(handle->base.slow_channel_index < 6)
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.crc >> (5-handle->base.slow_channel_index)) << 2) & 0x4;
+            else
+                msg->status_nibble |= ((slow_msg->as.slow_enhanced.data >> (15+6-handle->base.slow_channel_index)) << 2) & 0x4;
+            break;
             break;
         }
         break;
