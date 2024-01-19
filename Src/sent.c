@@ -76,17 +76,17 @@ uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg) {
     }
 }
 
-void SENT_message_init(SENTMsg_t *const message, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length) {
-    if(message == NULL)
+void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length) {
+    if(msg == NULL)
         return;
 
     if(data_length > 6)
         return;
     
-    message->status_nibble = status_nibble;
-    memcpy(message->data_nibbles, data_nibbles, data_length);
-    message->data_length = data_length;
-    message->crc = SENT_calc_crc(message);
+    msg->status_nibble = status_nibble;
+    memcpy(msg->data_nibbles, data_nibbles, data_length);
+    msg->data_length = data_length;
+    msg->crc = SENT_calc_crc(msg);
 }
 
 

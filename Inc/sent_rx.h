@@ -20,7 +20,7 @@ typedef struct SENTRxHandle {
     uint32_t capture;
     SENTRxState_t state;
     SENTMsg_t msg_buffer;
-    SENTSlowMsg_t slow_message_buffer;
+    SENTSlowMsg_t slow_msg_buffer;
     SENTRxCallback_t rx_callback;
     SENTRxCallback_t slow_rx_callback;
     uint32_t slow_channel_buffer_bit2;

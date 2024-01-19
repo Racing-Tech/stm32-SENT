@@ -65,7 +65,7 @@ typedef struct {
     uint32_t tim_to_tick_ratio;
 } SENTHandle_t;
 
-void SENT_message_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
+void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
 uint8_t SENT_calc_crc(SENTMsg_t *const msg);
 uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg);
 void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t pause_ticks);

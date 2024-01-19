@@ -1,6 +1,6 @@
 #include "sent_tx.h"
 
-uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTMsg_t *const message_source, SENTTxCallback_t msg_tx_callback, SENTSlowMsg_t *const slow_message_source, SENTTxCallback_t slow_msg_tx_callback, float tick_unit_time) {
+uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTMsg_t *const msg_source, SENTTxCallback_t msg_tx_callback, SENTSlowMsg_t *const slow_msg_source, SENTTxCallback_t slow_msg_tx_callback, float tick_unit_time) {
     if(handle == NULL || htim == NULL)
         return 0;
 
@@ -12,9 +12,9 @@ uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim,
     handle->base.channel = channel;
     handle->base.tim_to_tick_ratio = TIM_MS_TO_TICKS(htim, tick_unit_time);
 
-    handle->message_source = message_source;
+    handle->msg_source = msg_source;
     handle->msg_tx_callback = msg_tx_callback;
-    handle->slow_message_source = slow_message_source;
+    handle->slow_msg_source = slow_msg_source;
     handle->slow_msg_tx_callback = slow_msg_tx_callback;
     handle->msg_buffer_index = 0;
 
@@ -30,9 +30,9 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
 
     handle->base.status = SENT_TX;
     handle->base.index = 0;
-    SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[handle->msg_buffer_index], handle->message_source, 77);
+    SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[handle->msg_buffer_index], handle->msg_source, 77);
 
-    if(handle->slow_message_source != NULL) {
+    if(handle->slow_msg_source != NULL) {
         handle->base.slow_channel_status = SENT_SLOW_TX;
     }
 
@@ -130,9 +130,9 @@ void SENTTx_CompareCallback(SENTTxHandle_t *const handle) {
         return;
 
     if(handle->base.index == 0) {
-        SENTTx_SlowChannelFSM(handle, &handle->msg_buffer[handle->msg_buffer_index], handle->slow_message_source);
+        SENTTx_SlowChannelFSM(handle, &handle->msg_buffer[handle->msg_buffer_index], handle->slow_msg_source);
 
-        SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[!handle->msg_buffer_index], handle->message_source, 77);
+        SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[!handle->msg_buffer_index], handle->msg_source, 77);
     }
     
     __HAL_TIM_SET_AUTORELOAD(handle->base.htim, handle->msg_buffer[handle->msg_buffer_index].ticks[handle->base.index]-1);

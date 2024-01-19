@@ -14,9 +14,9 @@ typedef void (*SENTTxCallback_t)(SENTTxHandle_t *const handle);
 
 typedef struct SENTTxHandle {
     SENTHandle_t base;
-    SENTMsg_t *message_source;
+    SENTMsg_t *msg_source;
     SENTTxCallback_t msg_tx_callback;
-    SENTSlowMsg_t *slow_message_source;
+    SENTSlowMsg_t *slow_msg_source;
     SENTTxCallback_t slow_msg_tx_callback;
     SENTPhysMsg_t msg_buffer[2];
     uint8_t msg_buffer_index;
