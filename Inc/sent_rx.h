@@ -17,22 +17,19 @@ typedef enum {SENTRX_STATE_IDLE, SENTRX_STATE_SYNC, SENTRX_STATE_STATUS, SENTRX_
 
 typedef struct SENTRxHandle {
     SENTHandle_t base;
-    uint32_t captures[2];
+    uint32_t capture;
     SENTRxState_t state;
-    double tick_unit_time;
-    SENTMsg_t message_buffer;
+    SENTMsg_t msg_buffer;
     SENTSlowMsg_t slow_message_buffer;
     SENTRxCallback_t rx_callback;
     SENTRxCallback_t slow_rx_callback;
-    GPIO_TypeDef *output_port;
-    uint32_t output_pin;
     uint32_t slow_channel_buffer_bit2;
     uint32_t slow_channel_buffer_bit3;
 } SENTRxHandle_t;
 
-uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTRxCallback_t rx_callback, SENTRxCallback_t slow_rx_callback, GPIO_TypeDef *output_port, uint32_t output_pin);
-uint8_t SENTRx_getRxMessage(SENTRxHandle_t *const handle, SENTMsg_t *const message);
-uint8_t SENTRx_getRxSlowMessage(SENTRxHandle_t *const handle, SENTSlowMsg_t *const message);
+uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTRxCallback_t rx_callback, SENTRxCallback_t slow_rx_callback);
+uint8_t SENTRx_getRxMessage(SENTRxHandle_t *const handle, SENTMsg_t *const msg);
+uint8_t SENTRx_getRxSlowMessage(SENTRxHandle_t *const handle, SENTSlowMsg_t *const msg);
 void SENTRx_InputCaptureCallback(SENTRxHandle_t *const handle);
 
 #endif // SENT_RX_H

@@ -15,10 +15,11 @@
 #define SENT_SYNC_TICKS         56
 #define SENT_PAUSE_TICKS        77
 
-#define SENT_CRC_POLY 0x1D
-#define SENT_CRC_SEED 0x05
+#define SENT_CRC4_SEED 0x05
+#define SENT_CRC6_SEED 0x15
 
 #define SENT_NIBBLE_MASK(data)  ((data) & 0x0f)
+#define SENT_STATUS_MASK(status)  ((status) & 0x03)
 #define SENT_TICKS_TO_TIM(tim, ticks, unit) ((ticks) * TIM_MS_TO_TICKS((tim), (unit)))
 #define SENT_TIM_TO_TICKS(tim, ticks, unit) (TIM_TICKS_TO_MS((tim), (ticks))/(unit))
 
@@ -42,12 +43,17 @@ typedef struct {
             uint16_t id   :4;
         } slow_short;
         struct {
-            uint8_t crc;
-            uint16_t data;
+            uint32_t crc;
+            uint32_t data;
             uint8_t id;
         } slow_enhanced;
     } as;
 } SENTSlowMsg_t;
+
+typedef struct {
+    uint32_t ticks[10];
+    uint8_t length;
+} SENTPhysMsg_t;
 
 typedef struct {
     SENTHandleStatus_t status;
@@ -56,9 +62,12 @@ typedef struct {
     uint32_t channel;
     SENTSlowStatus_t slow_channel_status;
     uint8_t slow_channel_index;
+    uint32_t tim_to_tick_ratio;
 } SENTHandle_t;
 
-void SENT_message_init(SENTMsg_t *const message, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
-uint8_t SENT_calc_crc(SENTMsg_t *const message);
+void SENT_message_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
+uint8_t SENT_calc_crc(SENTMsg_t *const msg);
+uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg);
+void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t pause_ticks);
 
 #endif // SENT_H
