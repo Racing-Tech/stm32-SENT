@@ -36,7 +36,7 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
         handle->base.slow_channel_status = SENT_SLOW_TX;
     }
 
-    __HAL_TIM_SET_COMPARE(handle->base.htim, handle->base.channel, SENTTX_TICKS_TO_TIM(handle->base.htim, SENTTX_NIBBLE_LOW_TICKS));
+    __HAL_TIM_SET_COMPARE(handle->base.htim, handle->base.channel, SENT_TICKS_TO_TIM(SENTTX_NIBBLE_LOW_TICKS, handle->base.tim_to_tick_ratio));
     __HAL_TIM_SET_COUNTER(handle->base.htim, 0);
     __HAL_TIM_CLEAR_FLAG(handle->base.htim, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(handle->base.htim, TIM_IT_UPDATE);
@@ -62,7 +62,7 @@ void SENTTx_SlowChannelFSM(SENTTxHandle_t *const handle, SENTPhysMsg_t *const ms
             
             to_add += ((*((uint16_t*)(&slow_msg->as.slow_short)) >> (15-handle->base.slow_channel_index)) << 2) & 0x4;
 
-            msg->ticks[1] += to_add * handle->base.tim_to_tick_ratio;
+            msg->ticks[1] += SENT_TICKS_TO_TIM(to_add, handle->base.tim_to_tick_ratio);
 
             if(handle->base.slow_channel_index >= 15) {
                 handle->base.slow_channel_index = 0;
@@ -97,7 +97,7 @@ void SENTTx_SlowChannelFSM(SENTTxHandle_t *const handle, SENTPhysMsg_t *const ms
             else
                 to_add += ((slow_msg->as.slow_enhanced.data >> (11+6-handle->base.slow_channel_index)) << 2) & 0x4;
 
-            msg->ticks[1] += to_add * handle->base.tim_to_tick_ratio;
+            msg->ticks[1] += SENT_TICKS_TO_TIM(to_add, handle->base.tim_to_tick_ratio);
 
             if(handle->base.slow_channel_index >= 17) {
                 handle->base.slow_channel_index = 0;

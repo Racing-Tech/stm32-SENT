@@ -91,13 +91,13 @@ void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const d
 
 
 void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t pause_ticks) {
-    dest->ticks[0] = SENT_SYNC_TICKS * handle->tim_to_tick_ratio;
-    dest->ticks[1] = (SENT_STATUS_MASK(src->status_nibble)+SENT_MIN_NIBBLE_TICK_COUNT) * handle->tim_to_tick_ratio;
+    dest->ticks[0] = SENT_TICKS_TO_TIM(SENT_SYNC_TICKS, handle->tim_to_tick_ratio);
+    dest->ticks[1] = SENT_TICKS_TO_TIM(SENT_STATUS_MASK(src->status_nibble)+SENT_MIN_NIBBLE_TICK_COUNT, handle->tim_to_tick_ratio);
     for(uint8_t i=0; i<src->data_length; ++i) {
-        dest->ticks[i+2] = (SENT_NIBBLE_MASK(src->data_nibbles[i])+SENT_MIN_NIBBLE_TICK_COUNT) * handle->tim_to_tick_ratio;
+        dest->ticks[i+2] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->data_nibbles[i])+SENT_MIN_NIBBLE_TICK_COUNT, handle->tim_to_tick_ratio);
     }
-    dest->ticks[src->data_length+2] = (SENT_NIBBLE_MASK(src->crc)+SENT_MIN_NIBBLE_TICK_COUNT) * handle->tim_to_tick_ratio;
-    dest->ticks[src->data_length+3] = pause_ticks * handle->tim_to_tick_ratio;
+    dest->ticks[src->data_length+2] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->crc)+SENT_MIN_NIBBLE_TICK_COUNT, handle->tim_to_tick_ratio);
+    dest->ticks[src->data_length+3] = SENT_TICKS_TO_TIM(pause_ticks, handle->tim_to_tick_ratio);
     dest->length = src->data_length+4;
 }
 

@@ -20,8 +20,8 @@
 
 #define SENT_NIBBLE_MASK(data)  ((data) & 0x0f)
 #define SENT_STATUS_MASK(status)  ((status) & 0x03)
-#define SENT_TICKS_TO_TIM(tim, ticks, unit) ((ticks) * TIM_MS_TO_TICKS((tim), (unit)))
-#define SENT_TIM_TO_TICKS(tim, ticks, unit) (TIM_TICKS_TO_MS((tim), (ticks))/(unit))
+#define SENT_TICKS_TO_TIM(ticks, unit) ((ticks) * (unit))
+#define SENT_TIM_TO_TICKS(ticks, unit) ((ticks) / (unit))
 
 typedef enum {SENT_READY, SENT_TX, SENT_RX, SENT_NOT_READY} SENTHandleStatus_t;
 typedef enum {SENT_SLOWTYPE_SHORT, SENT_SLOWTYPE_ENHANCED12, SENT_SLOWTYPE_ENHANCED16} SENTSlowMsgType_t;

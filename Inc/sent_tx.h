@@ -7,8 +7,6 @@
 #define SENTTX_SYNC_TICKS         (SENT_SYNC_TICKS+SENTTX_NIBBLE_LOW_TICKS)
 #define SENTTX_PAUSE_TICKS        (SENT_PAUSE_TICKS+SENTTX_NIBBLE_LOW_TICKS)
 
-#define SENTTX_TICKS_TO_TIM(tim, ticks) ((ticks) * TIM_MS_TO_TICKS((tim), SENTTX_TICK_UNIT_MS))
-
 typedef struct SENTTxHandle SENTTxHandle_t;
 typedef void (*SENTTxCallback_t)(SENTTxHandle_t *const handle);
 
