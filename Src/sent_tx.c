@@ -4,13 +4,7 @@ uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim,
     if(handle == NULL || htim == NULL)
         return 0;
 
-    handle->base.status = SENT_READY;
-    handle->base.index = 0;
-    handle->base.slow_channel_status = SENT_SLOW_IDLE;
-    handle->base.slow_channel_index = 0;
-    handle->base.htim = htim;
-    handle->base.channel = channel;
-    handle->base.tim_to_tick_ratio = TIM_MS_TO_TICKS(htim, tick_unit_time);
+    SENT_init(&handle->base, htim, channel, tick_unit_time);
 
     handle->msg_source = msg_source;
     handle->msg_tx_callback = msg_tx_callback;

@@ -76,6 +76,24 @@ uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg) {
     }
 }
 
+uint8_t SENT_init(SENTHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, float tick_unit_time) {
+    if(handle == NULL || htim == NULL)
+        return 0;
+
+    handle->status = SENT_READY;
+    handle->index = 0;
+    handle->htim = htim;
+    handle->channel = channel;
+    handle->slow_channel_status = SENT_SLOW_IDLE;
+    handle->slow_channel_index = 0;
+    handle->tim_to_tick_ratio = TIM_MS_TO_TICKS(htim, tick_unit_time);
+
+    if(handle->tim_to_tick_ratio == 0)
+        handle->tim_to_tick_ratio = 1;
+
+    return 1;
+}
+
 void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length) {
     if(msg == NULL)
         return;

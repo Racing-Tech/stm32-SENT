@@ -65,6 +65,7 @@ typedef struct {
     uint32_t tim_to_tick_ratio;
 } SENTHandle_t;
 
+uint8_t SENT_init(SENTHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, float tick_unit_time);
 void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
 uint8_t SENT_calc_crc(SENTMsg_t *const msg);
 uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg);

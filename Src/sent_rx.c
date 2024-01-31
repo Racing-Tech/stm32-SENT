@@ -27,13 +27,7 @@ uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim,
     if(handle == NULL || htim == NULL)
         return 0;
 
-    handle->base.status = SENT_READY;
-    handle->base.index = 0;
-    handle->base.htim = htim;
-    handle->base.channel = channel;
-    handle->base.slow_channel_status = SENT_SLOW_IDLE;
-    handle->base.slow_channel_index = 0;
-    handle->base.tim_to_tick_ratio = 1;
+    SENT_init(&handle->base, htim, channel, 0);
 
     handle->rx_callback = rx_callback;
     handle->slow_rx_callback = slow_rx_callback;
