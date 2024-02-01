@@ -23,18 +23,19 @@ HAL_TIM_ActiveChannel SENTRx_getActiveChannel(uint32_t channel) {
     return ch;
 }
 
-uint8_t SENTRx_init(SENTRxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTRxCallback_t rx_callback,  SENTRxCallback_t slow_rx_callback) {
-    if(handle == NULL || htim == NULL)
+uint8_t SENTRx_init(SENTRxHandle_t *const handle, SENTHandleInit_t *const init, SENTRxCallback_t rx_callback,  SENTRxSlowCallback_t slow_rx_callback) {
+    if(handle == NULL || init == NULL || init->htim == NULL)
         return 0;
 
-    SENT_init(&handle->base, htim, channel, 0);
+    SENT_init(&handle->base, init);
 
     handle->rx_callback = rx_callback;
     handle->slow_rx_callback = slow_rx_callback;
     handle->slow_channel_buffer_bit2 = 0;
     handle->slow_channel_buffer_bit3 = 0;
     handle->capture = 0;
-    handle->state = SENTRX_STATE_IDLE;
+    handle->state = SENTRX_STATE_SYNC;
+    handle->last_tick_to_tim_ratio = handle->base.tim_to_tick_ratio;
 
     __HAL_TIM_SET_AUTORELOAD(handle->base.htim, TIM_GET_MAX_AUTORELOAD(handle->base.htim));
     __HAL_TIM_CLEAR_FLAG(handle->base.htim, TIM_FLAG_UPDATE);
@@ -140,60 +141,48 @@ void SENTRx_SlowChannelFSM(SENTRxHandle_t *const handle, uint8_t status) {
 }
 
 void SENTRx_InputCaptureCallback(SENTRxHandle_t *const handle) {
+    SENTMsg_t msg;
     uint32_t oldCapture;
     uint8_t ticks;
+    uint32_t new_tick_to_tim_ratio;
     if(handle->base.htim->Channel == SENTRx_getActiveChannel(handle->base.channel)) {
         oldCapture = handle->capture;
         handle->capture = HAL_TIM_ReadCapturedValue(handle->base.htim, handle->base.channel);
-        ticks = SENT_TIM_TO_TICKS(handle->capture - oldCapture, handle->base.tim_to_tick_ratio);
+        ticks = SENT_TIM_TO_TICKS(handle->capture - oldCapture, handle->last_tick_to_tim_ratio);
 
         switch(handle->state) {
-            case SENTRX_STATE_IDLE:
-                handle->state = SENTRX_STATE_SYNC;
-                break;
             case SENTRX_STATE_SYNC:
-                handle->base.index = 0;
-                handle->base.tim_to_tick_ratio = (handle->capture - oldCapture) / SENT_SYNC_TICKS;
-                if(handle->base.tim_to_tick_ratio < TIM_MS_TO_TICKS(handle->base.htim, SENTRX_MIN_TICK_UNIT_MS) || handle->base.tim_to_tick_ratio > TIM_MS_TO_TICKS(handle->base.htim, SENTRX_MAX_TICK_UNIT_MS))
+                handle->msg_buffer.length = 0;
+                new_tick_to_tim_ratio = (handle->capture - oldCapture) / SENT_SYNC_TICKS;
+                if(new_tick_to_tim_ratio < handle->last_tick_to_tim_ratio*63/64 || new_tick_to_tim_ratio > handle->last_tick_to_tim_ratio*65/64)
+                    break;
+                
+                handle->last_tick_to_tim_ratio = new_tick_to_tim_ratio;
+                if(handle->last_tick_to_tim_ratio < handle->base.tim_to_tick_ratio * 0.75 || handle->last_tick_to_tim_ratio > handle->base.tim_to_tick_ratio * 1.25)
                     handle->state = SENTRX_STATE_SYNC;
                 else
-                    handle->state = SENTRX_STATE_STATUS;    
+                    handle->state = SENTRX_STATE_NIBBLES;
                 break;
-            case SENTRX_STATE_STATUS:
-                if(ticks > SENT_MAX_NIBBLE_TICK_COUNT * 1.2) {
+            case SENTRX_STATE_NIBBLES:
+                if(ticks < SENT_MIN_NIBBLE_TICK_COUNT * 0.8 || ticks > SENT_MAX_NIBBLE_TICK_COUNT * 1.2) {
                     handle->state = SENTRX_STATE_SYNC;
-                } else {
-                    handle->msg_buffer.status_nibble = ticks - SENT_MIN_NIBBLE_TICK_COUNT;
-                    handle->msg_buffer.data_length = 0;
-                    handle->state = SENTRX_STATE_DATA;
-                }
-                break;
-            case SENTRX_STATE_DATA:
-                if(handle->base.index - 2 < 7) {
-                    if(handle->base.index - 3 >= 0)
-                        handle->msg_buffer.data_nibbles[handle->base.index-3] = handle->msg_buffer.crc;
-                    handle->msg_buffer.crc = ticks - SENT_MIN_NIBBLE_TICK_COUNT;
-                    ++handle->msg_buffer.data_length;
-                    handle->state = SENTRX_STATE_DATA;
-                    break;
-                }
-                
-                if(ticks > SENT_MAX_NIBBLE_TICK_COUNT * 1.2) {
-                    handle->state = SENTRX_STATE_SYNC;
-                } else {
-                    handle->state = SENTRX_STATE_IDLE;
-                }
-
-                --handle->msg_buffer.data_length;
-                if(SENT_calc_crc(&handle->msg_buffer) == handle->msg_buffer.crc && handle->rx_callback) {
-                    SENTRx_SlowChannelFSM(handle, handle->msg_buffer.status_nibble);
-                    handle->rx_callback(handle);
                 }
                 break;
             default:
                 break;
         }
-        ++handle->base.index;
+
+        handle->msg_buffer.ticks[handle->msg_buffer.length++] = handle->capture - oldCapture;
+
+        if(handle->msg_buffer.length == handle->base.nibble_count) {
+            SENT_decodePhysMsg(&handle->base, &msg, &handle->msg_buffer, handle->last_tick_to_tim_ratio);
+            if(SENT_calc_crc(&msg) == msg.crc){
+                SENTRx_SlowChannelFSM(handle, msg.status_nibble);
+                if(handle->rx_callback)
+                    handle->rx_callback(handle, &msg);
+            }
+            handle->state = SENTRX_STATE_SYNC;
+        }
     }
 
 }

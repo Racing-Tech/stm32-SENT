@@ -20,7 +20,7 @@ typedef struct SENTTxHandle {
     uint8_t msg_buffer_index;
 } SENTTxHandle_t;
 
-uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTMsg_t *const msg_source, SENTTxCallback_t msg_tx_callback, SENTSlowMsg_t *const slow_msg_source, SENTTxCallback_t slow_msg_tx_callback, float tick_unit_time);
+uint8_t SENTTx_init(SENTTxHandle_t *const handle, SENTHandleInit_t *const init, SENTMsg_t *const msg_source, SENTTxCallback_t msg_tx_callback, SENTSlowMsg_t *const slow_msg_source, SENTTxCallback_t slow_msg_tx_callback);
 uint8_t SENTTx_start(SENTTxHandle_t *const handle);
 void SENTTx_AutoReloadCallback(SENTTxHandle_t *const handle);
 void SENTTx_CompareCallback(SENTTxHandle_t * const handle);

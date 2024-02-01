@@ -76,17 +76,20 @@ uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg) {
     }
 }
 
-uint8_t SENT_init(SENTHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, float tick_unit_time) {
-    if(handle == NULL || htim == NULL)
+uint8_t SENT_init(SENTHandle_t *const handle, SENTHandleInit_t *const init) {
+    if(handle == NULL || init == NULL || init->htim == NULL)
         return 0;
 
     handle->status = SENT_READY;
     handle->index = 0;
-    handle->htim = htim;
-    handle->channel = channel;
+    handle->htim = init->htim;
+    handle->channel = init->channel;
     handle->slow_channel_status = SENT_SLOW_IDLE;
     handle->slow_channel_index = 0;
-    handle->tim_to_tick_ratio = TIM_MS_TO_TICKS(htim, tick_unit_time);
+    handle->tim_to_tick_ratio = TIM_MS_TO_TICKS(init->htim, init->tick_unit_time);
+    handle->has_pause = init->has_pause;
+    handle->message_tick_len = init->message_tick_len;
+    handle->nibble_count = init->data_length + (init->has_pause ? 4 : 3);
 
     if(handle->tim_to_tick_ratio == 0)
         handle->tim_to_tick_ratio = 1;
@@ -100,25 +103,45 @@ void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const d
 
     if(data_length > 6)
         return;
-    
+
     msg->status_nibble = status_nibble;
     memcpy(msg->data_nibbles, data_nibbles, data_length);
     msg->data_length = data_length;
     msg->crc = SENT_calc_crc(msg);
 }
 
-
-void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t pause_ticks) {
-    dest->ticks[0] = SENT_TICKS_TO_TIM(SENT_SYNC_TICKS, handle->tim_to_tick_ratio);
-    dest->ticks[1] = SENT_TICKS_TO_TIM(SENT_STATUS_MASK(src->status_nibble)+SENT_MIN_NIBBLE_TICK_COUNT, handle->tim_to_tick_ratio);
-    for(uint8_t i=0; i<src->data_length; ++i) {
-        dest->ticks[i+2] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->data_nibbles[i])+SENT_MIN_NIBBLE_TICK_COUNT, handle->tim_to_tick_ratio);
-    }
-    dest->ticks[src->data_length+2] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->crc)+SENT_MIN_NIBBLE_TICK_COUNT, handle->tim_to_tick_ratio);
-    dest->ticks[src->data_length+3] = SENT_TICKS_TO_TIM(pause_ticks, handle->tim_to_tick_ratio);
-    dest->length = src->data_length+4;
+uint16_t SENT_msg_get_ticks(SENTMsg_t *const msg) {
+    uint8_t ticks = SENT_SYNC_TICKS;
+    ticks += SENT_NIBBLE_MASK(msg->status_nibble) + SENT_MIN_NIBBLE_TICK_COUNT;
+    for(uint8_t i=0;i<msg->data_length;++i)
+        ticks += SENT_NIBBLE_MASK(msg->data_nibbles[i]) + SENT_MIN_NIBBLE_TICK_COUNT;
+    ticks += SENT_NIBBLE_MASK(msg->crc) + SENT_MIN_NIBBLE_TICK_COUNT;
+    return ticks;
 }
 
-void SENT_decodePhysMsg(SENTHandle_t *const handle, SENTMsg_t *const dest, SENTPhysMsg_t *const src) {
+void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t tim_to_tick_ratio) {
+    dest->length = 0;
+    dest->ticks[dest->length++] = SENT_TICKS_TO_TIM(SENT_SYNC_TICKS, tim_to_tick_ratio);
+    dest->ticks[dest->length++] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->status_nibble)+SENT_MIN_NIBBLE_TICK_COUNT, tim_to_tick_ratio);
+    for(uint8_t i=0; i<src->data_length; ++i) {
+        dest->ticks[dest->length++] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->data_nibbles[i])+SENT_MIN_NIBBLE_TICK_COUNT, tim_to_tick_ratio);
+    }
+    dest->ticks[dest->length++] = SENT_TICKS_TO_TIM(SENT_NIBBLE_MASK(src->crc)+SENT_MIN_NIBBLE_TICK_COUNT, tim_to_tick_ratio);
+
+    if(handle->has_pause) {
+        dest->ticks[dest->length++] = SENT_TICKS_TO_TIM(handle->message_tick_len - SENT_msg_get_ticks(src), tim_to_tick_ratio);
+    }
+}
+
+void SENT_decodePhysMsg(SENTHandle_t *const handle, SENTMsg_t *const dest, SENTPhysMsg_t *const src, uint32_t tim_to_tick_ratio) {
+    dest->status_nibble = SENT_TIM_TO_TICKS(src->ticks[1], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;
+
+    dest->data_length = src->length - 3;
+    if(handle->has_pause)
+        --dest->data_length;
     
+    for(uint8_t i=0; i<dest->data_length; ++i) {
+        dest->data_nibbles[i] = SENT_TIM_TO_TICKS(src->ticks[i+2], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;
+    }
+    dest->crc = SENT_TIM_TO_TICKS(src->ticks[dest->data_length+2], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;
 }

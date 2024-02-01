@@ -56,19 +56,32 @@ typedef struct {
 } SENTPhysMsg_t;
 
 typedef struct {
-    SENTHandleStatus_t status;
-    uint8_t index;
     TIM_HandleTypeDef *htim;
     uint32_t channel;
+    uint8_t has_pause;
+    uint16_t message_tick_len;
+    uint8_t data_length;
+    double tick_unit_time;
+} SENTHandleInit_t;
+
+typedef struct {
+    TIM_HandleTypeDef *htim;
+    uint32_t channel;
+    uint8_t has_pause;
+    uint16_t message_tick_len;
+    uint8_t nibble_count;
+    SENTHandleStatus_t status;
+    uint8_t index;
     SENTSlowStatus_t slow_channel_status;
     uint8_t slow_channel_index;
     uint32_t tim_to_tick_ratio;
 } SENTHandle_t;
 
-uint8_t SENT_init(SENTHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, float tick_unit_time);
+uint8_t SENT_init(SENTHandle_t *const handle, SENTHandleInit_t *const init);
 void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
 uint8_t SENT_calc_crc(SENTMsg_t *const msg);
 uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg);
-void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t pause_ticks);
+void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t tim_to_tick_ratio);
+void SENT_decodePhysMsg(SENTHandle_t *const handle, SENTMsg_t *const dest, SENTPhysMsg_t *const src, uint32_t tim_to_tick_ratio);
 
 #endif // SENT_H

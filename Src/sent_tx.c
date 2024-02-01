@@ -1,10 +1,10 @@
 #include "sent_tx.h"
 
-uint8_t SENTTx_init(SENTTxHandle_t *const handle, TIM_HandleTypeDef *const htim, uint32_t channel, SENTMsg_t *const msg_source, SENTTxCallback_t msg_tx_callback, SENTSlowMsg_t *const slow_msg_source, SENTTxCallback_t slow_msg_tx_callback, float tick_unit_time) {
-    if(handle == NULL || htim == NULL)
+uint8_t SENTTx_init(SENTTxHandle_t *const handle, SENTHandleInit_t *const init, SENTMsg_t *const msg_source, SENTTxCallback_t msg_tx_callback, SENTSlowMsg_t *const slow_msg_source, SENTTxCallback_t slow_msg_tx_callback) {
+    if(handle == NULL || init == NULL || init->htim == NULL)
         return 0;
 
-    SENT_init(&handle->base, htim, channel, tick_unit_time);
+    SENT_init(&handle->base, init);
 
     handle->msg_source = msg_source;
     handle->msg_tx_callback = msg_tx_callback;
@@ -24,7 +24,7 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
 
     handle->base.status = SENT_TX;
     handle->base.index = 0;
-    SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[handle->msg_buffer_index], handle->msg_source, 77);
+    SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[handle->msg_buffer_index], handle->msg_source, handle->base.tim_to_tick_ratio);
 
     if(handle->slow_msg_source != NULL) {
         handle->base.slow_channel_status = SENT_SLOW_TX;
@@ -40,7 +40,7 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
 }
 
 void SENTTx_SlowChannelFSM(SENTTxHandle_t *const handle, SENTPhysMsg_t *const msg, SENTSlowMsg_t *const slow_msg) {
-    uint32_t to_add = 0;
+    uint32_t status_ticks = SENT_STATUS_MASK(SENT_TIM_TO_TICKS(msg->ticks[1], handle->base.tim_to_tick_ratio)-SENT_MIN_NIBBLE_TICK_COUNT);
     switch (handle->base.slow_channel_status)
     {
     default:
@@ -52,11 +52,15 @@ void SENTTx_SlowChannelFSM(SENTTxHandle_t *const handle, SENTPhysMsg_t *const ms
         {
         case SENT_SLOWTYPE_SHORT:
             if(handle->base.slow_channel_index == 0)
-                to_add += (1 << 3);
+                status_ticks |= (1 << 3);
             
-            to_add += ((*((uint16_t*)(&slow_msg->as.slow_short)) >> (15-handle->base.slow_channel_index)) << 2) & 0x4;
+            status_ticks |= ((*((uint16_t*)(&slow_msg->as.slow_short)) >> (15-handle->base.slow_channel_index)) << 2) & 0x4;
 
-            msg->ticks[1] += SENT_TICKS_TO_TIM(to_add, handle->base.tim_to_tick_ratio);
+            status_ticks += SENT_MIN_NIBBLE_TICK_COUNT;
+
+            if(handle->base.has_pause)
+                msg->ticks[msg->length-1] -= SENT_TICKS_TO_TIM(status_ticks, handle->base.tim_to_tick_ratio) - msg->ticks[1];
+            msg->ticks[1] = SENT_TICKS_TO_TIM(status_ticks, handle->base.tim_to_tick_ratio);
 
             if(handle->base.slow_channel_index >= 15) {
                 handle->base.slow_channel_index = 0;
@@ -70,28 +74,32 @@ void SENTTx_SlowChannelFSM(SENTTxHandle_t *const handle, SENTPhysMsg_t *const ms
         case SENT_SLOWTYPE_ENHANCED16:
         case SENT_SLOWTYPE_ENHANCED12:
             if(handle->base.slow_channel_index < 6)
-                to_add += (1 << 3);
+                status_ticks |= (1 << 3);
             else if(handle->base.slow_channel_index == 7)
-                to_add += slow_msg->type == SENT_SLOWTYPE_ENHANCED12 ? 0 : (1<<3);
+                status_ticks |= slow_msg->type == SENT_SLOWTYPE_ENHANCED12 ? 0 : (1<<3);
             else if(handle->base.slow_channel_index >= 8 && handle->base.slow_channel_index < 12) {
                 if(slow_msg->type == SENT_SLOWTYPE_ENHANCED12)
-                    to_add += ((slow_msg->as.slow_enhanced.id >> (7+8-handle->base.slow_channel_index)) << 3) & 0x8;
+                    status_ticks |= ((slow_msg->as.slow_enhanced.id >> (7+8-handle->base.slow_channel_index)) << 3) & 0x8;
                 else
-                    to_add += ((slow_msg->as.slow_enhanced.id >> (3+8-handle->base.slow_channel_index)) << 3) & 0x8;
+                    status_ticks |= ((slow_msg->as.slow_enhanced.id >> (3+8-handle->base.slow_channel_index)) << 3) & 0x8;
             }
             else if(handle->base.slow_channel_index >= 13 && handle->base.slow_channel_index < 17) {
                 if(slow_msg->type == SENT_SLOWTYPE_ENHANCED12)
-                    to_add += ((slow_msg->as.slow_enhanced.id >> (3+13-handle->base.slow_channel_index)) << 3) & 0x8;
+                    status_ticks |= ((slow_msg->as.slow_enhanced.id >> (3+13-handle->base.slow_channel_index)) << 3) & 0x8;
                 else
-                    to_add += ((slow_msg->as.slow_enhanced.data >> (15+13-handle->base.slow_channel_index)) << 3) & 0x8;
+                    status_ticks |= ((slow_msg->as.slow_enhanced.data >> (15+13-handle->base.slow_channel_index)) << 3) & 0x8;
             }
             
             if(handle->base.slow_channel_index < 6)
-                to_add += ((slow_msg->as.slow_enhanced.crc >> (5-handle->base.slow_channel_index)) << 2) & 0x4;
+                status_ticks |= ((slow_msg->as.slow_enhanced.crc >> (5-handle->base.slow_channel_index)) << 2) & 0x4;
             else
-                to_add += ((slow_msg->as.slow_enhanced.data >> (11+6-handle->base.slow_channel_index)) << 2) & 0x4;
+                status_ticks |= ((slow_msg->as.slow_enhanced.data >> (11+6-handle->base.slow_channel_index)) << 2) & 0x4;
 
-            msg->ticks[1] += SENT_TICKS_TO_TIM(to_add, handle->base.tim_to_tick_ratio);
+            status_ticks += SENT_MIN_NIBBLE_TICK_COUNT;
+
+            if(handle->base.has_pause)
+                msg->ticks[msg->length-1] -= SENT_TICKS_TO_TIM(status_ticks, handle->base.tim_to_tick_ratio) - msg->ticks[1];
+            msg->ticks[1] = SENT_TICKS_TO_TIM(status_ticks, handle->base.tim_to_tick_ratio);
 
             if(handle->base.slow_channel_index >= 17) {
                 handle->base.slow_channel_index = 0;
@@ -124,9 +132,10 @@ void SENTTx_CompareCallback(SENTTxHandle_t *const handle) {
         return;
 
     if(handle->base.index == 0) {
-        SENTTx_SlowChannelFSM(handle, &handle->msg_buffer[handle->msg_buffer_index], handle->slow_msg_source);
+        if(handle->slow_msg_source)
+            SENTTx_SlowChannelFSM(handle, &handle->msg_buffer[handle->msg_buffer_index], handle->slow_msg_source);
 
-        SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[!handle->msg_buffer_index], handle->msg_source, 77);
+        SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[!handle->msg_buffer_index], handle->msg_source, handle->base.tim_to_tick_ratio);
     }
     
     __HAL_TIM_SET_AUTORELOAD(handle->base.htim, handle->msg_buffer[handle->msg_buffer_index].ticks[handle->base.index]-1);
