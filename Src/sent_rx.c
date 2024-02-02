@@ -36,12 +36,20 @@ uint8_t SENTRx_init(SENTRxHandle_t *const handle, SENTHandleInit_t *const init, 
     handle->capture = 0;
     handle->state = SENTRX_STATE_SYNC;
     handle->last_tick_to_tim_ratio = handle->base.tim_to_tick_ratio;
+    
+    return 1;
+}
+
+uint8_t SENTRx_start(SENTRxHandle_t *const handle) {
+    if(handle == NULL)
+        return 0;
+
+    if(handle->base.status != SENT_READY)
+        return 0;
 
     __HAL_TIM_SET_AUTORELOAD(handle->base.htim, TIM_GET_MAX_AUTORELOAD(handle->base.htim));
-    __HAL_TIM_CLEAR_FLAG(handle->base.htim, TIM_FLAG_UPDATE);
-
     HAL_TIM_IC_Start_IT(handle->base.htim, handle->base.channel);
-    
+
     return 1;
 }
 

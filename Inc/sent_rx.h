@@ -30,6 +30,7 @@ typedef struct SENTRxHandle {
 } SENTRxHandle_t;
 
 uint8_t SENTRx_init(SENTRxHandle_t *const handle, SENTHandleInit_t *const init, SENTRxCallback_t rx_callback, SENTRxSlowCallback_t slow_rx_callback);
+uint8_t SENTRx_start(SENTRxHandle_t *const handle);
 uint8_t SENTRx_getRxMessage(SENTRxHandle_t *const handle, SENTMsg_t *const msg);
 uint8_t SENTRx_getRxSlowMessage(SENTRxHandle_t *const handle, SENTSlowMsg_t *const msg);
 void SENTRx_InputCaptureCallback(SENTRxHandle_t *const handle);
