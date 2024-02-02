@@ -148,6 +148,8 @@ void SENTRx_InputCaptureCallback(SENTRxHandle_t *const handle) {
     if(handle->base.htim->Channel == SENTRx_getActiveChannel(handle->base.channel)) {
         oldCapture = handle->capture;
         handle->capture = HAL_TIM_ReadCapturedValue(handle->base.htim, handle->base.channel);
+        if(oldCapture == 0)
+            return;
         ticks = SENT_TIM_TO_TICKS(handle->capture - oldCapture, handle->last_tick_to_tim_ratio);
 
         switch(handle->state) {

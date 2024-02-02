@@ -32,7 +32,6 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
 
     __HAL_TIM_SET_COMPARE(handle->base.htim, handle->base.channel, SENT_TICKS_TO_TIM(SENTTX_NIBBLE_LOW_TICKS, handle->base.tim_to_tick_ratio));
     __HAL_TIM_SET_COUNTER(handle->base.htim, 0);
-    __HAL_TIM_CLEAR_FLAG(handle->base.htim, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(handle->base.htim, TIM_IT_UPDATE);
     HAL_TIM_PWM_Start_IT(handle->base.htim, handle->base.channel);
 

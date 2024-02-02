@@ -4,6 +4,7 @@
 #include "main.h"
 #include "timer_utils.h"
 
+#include <math.h>
 #include <inttypes.h>
 
 #define SENT_MIN_TICK_UNIT_MS   0.003
@@ -20,8 +21,8 @@
 
 #define SENT_NIBBLE_MASK(data)  ((data) & 0x0f)
 #define SENT_STATUS_MASK(status)  ((status) & 0x03)
-#define SENT_TICKS_TO_TIM(ticks, unit) ((ticks) * (unit))
-#define SENT_TIM_TO_TICKS(ticks, unit) ((ticks) / (unit))
+#define SENT_TICKS_TO_TIM(ticks, unit) ((uint32_t)roundf((float)(ticks) * (unit)))
+#define SENT_TIM_TO_TICKS(ticks, unit) ((uint32_t)roundf((float)(ticks) / (unit)))
 
 typedef enum {SENT_READY, SENT_TX, SENT_RX, SENT_NOT_READY} SENTHandleStatus_t;
 typedef enum {SENT_SLOWTYPE_SHORT, SENT_SLOWTYPE_ENHANCED12, SENT_SLOWTYPE_ENHANCED16} SENTSlowMsgType_t;
