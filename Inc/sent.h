@@ -19,6 +19,8 @@
 #define SENT_CRC4_SEED 0x05
 #define SENT_CRC6_SEED 0x15
 
+#define SENT_MAX_NIBBLES 8
+
 #define SENT_NIBBLE_MASK(data)  ((data) & 0x0f)
 #define SENT_STATUS_MASK(status)  ((status) & 0x03)
 #define SENT_TICKS_TO_TIM(ticks, unit) ((uint32_t)roundf((float)(ticks) * (unit)))
@@ -30,7 +32,7 @@ typedef enum {SENT_SLOW_IDLE, SENT_SLOW_RX, SENT_SLOW_RX_SHORT, SENT_SLOW_RX_ENH
 
 typedef struct {
     uint8_t status_nibble;
-    uint8_t data_nibbles[6];
+    uint8_t data_nibbles[SENT_MAX_NIBBLES];
     uint8_t crc;
     uint8_t data_length;
 } SENTMsg_t;
@@ -44,15 +46,15 @@ typedef struct {
             uint16_t id   :4;
         } slow_short;
         struct {
-            uint32_t crc;
-            uint32_t data;
+            uint8_t crc;
+            uint16_t data;
             uint8_t id;
         } slow_enhanced;
     } as;
 } SENTSlowMsg_t;
 
 typedef struct {
-    uint32_t ticks[10];
+    uint32_t ticks[SENT_MAX_NIBBLES+4];
     uint8_t length;
 } SENTPhysMsg_t;
 

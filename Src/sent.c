@@ -137,8 +137,6 @@ void SENT_decodePhysMsg(SENTHandle_t *const handle, SENTMsg_t *const dest, SENTP
     dest->status_nibble = SENT_TIM_TO_TICKS(src->ticks[1], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;
 
     dest->data_length = src->length - 3;
-    if(handle->has_pause)
-        --dest->data_length;
     
     for(uint8_t i=0; i<dest->data_length; ++i) {
         dest->data_nibbles[i] = SENT_TIM_TO_TICKS(src->ticks[i+2], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;

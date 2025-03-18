@@ -16,7 +16,11 @@ typedef struct SENTTxHandle {
     SENTTxCallback_t msg_tx_callback;
     SENTSlowMsg_t *slow_msg_source;
     SENTTxCallback_t slow_msg_tx_callback;
-    SENTPhysMsg_t msg_buffer[2];
+    SENTPhysMsg_t msg_buffer;
+    union {
+        uint16_t u16[SENT_MAX_NIBBLES+4];
+        uint32_t u32[SENT_MAX_NIBBLES+4];
+    } dma_buffer;
     uint8_t msg_buffer_index;
 } SENTTxHandle_t;
 

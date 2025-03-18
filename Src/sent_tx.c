@@ -15,6 +15,15 @@ uint8_t SENTTx_init(SENTTxHandle_t *const handle, SENTHandleInit_t *const init, 
     return 1;
 }
 
+void _load_dma_buf(SENTTxHandle_t *const handle) {
+    for(int i=0; i<handle->msg_buffer.length; ++i) {
+        if(IS_TIM_32B_COUNTER_INSTANCE(handle->base.htim))
+            handle->dma_buffer.u32[i] = handle->msg_buffer.ticks[i];
+        else
+            handle->dma_buffer.u16[i] = handle->msg_buffer.ticks[i];
+    }
+}
+
 uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
     if(handle == NULL)
         return 0;
@@ -24,7 +33,7 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
 
     handle->base.status = SENT_TX;
     handle->base.index = 0;
-    SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[handle->msg_buffer_index], handle->msg_source, handle->base.tim_to_tick_ratio);
+    SENT_encodePhysMsg(&handle->base, &handle->msg_buffer, handle->msg_source, handle->base.tim_to_tick_ratio);
 
     if(handle->slow_msg_source != NULL) {
         handle->base.slow_channel_status = SENT_SLOW_TX;
@@ -33,7 +42,12 @@ uint8_t SENTTx_start(SENTTxHandle_t *const handle) {
     __HAL_TIM_SET_COMPARE(handle->base.htim, handle->base.channel, SENT_TICKS_TO_TIM(SENTTX_NIBBLE_LOW_TICKS, handle->base.tim_to_tick_ratio));
     __HAL_TIM_SET_COUNTER(handle->base.htim, 0);
     __HAL_TIM_ENABLE_IT(handle->base.htim, TIM_IT_UPDATE);
+
+    _load_dma_buf(handle);
+
+    HAL_TIM_Base_Start_DMA(handle->base.htim, handle->dma_buffer.u32, handle->msg_buffer.length);
     HAL_TIM_PWM_Start_IT(handle->base.htim, handle->base.channel);
+
 
     return 1;
 }
@@ -118,25 +132,26 @@ void SENTTx_AutoReloadCallback(SENTTxHandle_t *const handle) {
     if(handle == NULL)
         return;
     
-    if(handle->base.index >= handle->msg_buffer[handle->msg_buffer_index].length) {
+    if(handle->base.index >= handle->msg_buffer.length) {
         handle->base.index = 0;
         if(handle->msg_tx_callback)
             handle->msg_tx_callback(handle);
         handle->msg_buffer_index = !handle->msg_buffer_index;
+    }
+
+    if(handle->base.index == 0) {
+        if(handle->slow_msg_source)
+            SENTTx_SlowChannelFSM(handle, &handle->msg_buffer, handle->slow_msg_source);
+            
+        _load_dma_buf(handle);
+
+        SENT_encodePhysMsg(&handle->base, &handle->msg_buffer, handle->msg_source, handle->base.tim_to_tick_ratio);
     }
 }
 
 void SENTTx_CompareCallback(SENTTxHandle_t *const handle) {
     if(handle == NULL)
         return;
-
-    if(handle->base.index == 0) {
-        if(handle->slow_msg_source)
-            SENTTx_SlowChannelFSM(handle, &handle->msg_buffer[handle->msg_buffer_index], handle->slow_msg_source);
-
-        SENT_encodePhysMsg(&handle->base, &handle->msg_buffer[!handle->msg_buffer_index], handle->msg_source, handle->base.tim_to_tick_ratio);
-    }
     
-    __HAL_TIM_SET_AUTORELOAD(handle->base.htim, handle->msg_buffer[handle->msg_buffer_index].ticks[handle->base.index]-1);
     ++handle->base.index;
 }
