@@ -1,5 +1,12 @@
 #ifndef SENT_H
 #define SENT_H
+/**
+ * @file sent.h
+ * @brief Header file for SENT protocol implementation on STM32.
+ *
+ * This file contains function declarations and structures for encoding, decoding,
+ * and managing SENT (Single Edge Nibble Transmission) messages.
+ */
 
 #include "main.h"
 #include "timer_utils.h"
@@ -80,11 +87,60 @@ typedef struct {
     uint32_t tim_to_tick_ratio;
 } SENTHandle_t;
 
+/**
+ * @brief Initializes a SENT handle.
+ *
+ * @param handle Pointer to the SENT handle structure.
+ * @param init Pointer to the initialization structure.
+ * @return 1 if initialization is successful, 0 otherwise.
+ */
 uint8_t SENT_init(SENTHandle_t *const handle, SENTHandleInit_t *const init);
+
+/**
+ * @brief Initializes a SENT message structure.
+ *
+ * @param msg Pointer to the SENT message structure.
+ * @param status_nibble The status nibble value.
+ * @param data_nibbles Pointer to the data nibbles array.
+ * @param data_length Number of data nibbles.
+ */
 void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
+
+/**
+ * @brief Calculates the CRC for a SENT message.
+ *
+ * @param msg Pointer to the SENT message structure.
+ * @return The calculated CRC value.
+ */
 uint8_t SENT_calc_crc(SENTMsg_t *const msg);
+
+/**
+ * @brief Calculates the CRC for a SENT slow message.
+ *
+ * @param msg Pointer to the SENT slow message structure.
+ * @return The calculated CRC value.
+ */
 uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg);
+
+/**
+ * @brief Encodes a SENT message into a physical format.
+ *
+ * @param handle Pointer to the SENT handle.
+ * @param dest Pointer to the physical message structure.
+ * @param src Pointer to the SENT message structure.
+ * @param tim_to_tick_ratio Conversion ratio from timer to tick.
+ */
 void SENT_encodePhysMsg(SENTHandle_t *const handle, SENTPhysMsg_t *const dest, SENTMsg_t *const src, uint32_t tim_to_tick_ratio);
+
+/**
+ * @brief Decodes a physical SENT message into a logical SENT message.
+ *
+ * @param handle Pointer to the SENT handle.
+ * @param dest Pointer to the SENT message structure.
+ * @param src Pointer to the physical message structure.
+ * @param tim_to_tick_ratio Conversion ratio from timer to tick.
+ */
 void SENT_decodePhysMsg(SENTHandle_t *const handle, SENTMsg_t *const dest, SENTPhysMsg_t *const src, uint32_t tim_to_tick_ratio);
+
 
 #endif // SENT_H
