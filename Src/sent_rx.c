@@ -110,7 +110,7 @@ void SENTRx_SlowChannelFSM(SENTRxHandle_t *const handle, uint8_t status) {
             handle->base.slow_channel_status = SENT_SLOW_IDLE;
             SENTRx_ElaborateSlowShort(&handle->slow_msg_buffer, handle->slow_channel_buffer_bit2);
             if(SENT_calc_crc_slow(&handle->slow_msg_buffer) == handle->slow_msg_buffer.as.slow_short.crc && handle->slow_rx_callback)
-                handle->slow_rx_callback(&handle->slow_msg_buffer, handle->user_data);
+                handle->slow_rx_callback(handle, &handle->slow_msg_buffer, handle->user_data);
         }
         break;
 
@@ -122,7 +122,7 @@ void SENTRx_SlowChannelFSM(SENTRxHandle_t *const handle, uint8_t status) {
             handle->base.slow_channel_status = SENT_SLOW_IDLE;
             SENTRx_ElaborateSlowEnhanced(&handle->slow_msg_buffer, handle->slow_channel_buffer_bit2, handle->slow_channel_buffer_bit3);
             if(SENT_calc_crc_slow(&handle->slow_msg_buffer) == handle->slow_msg_buffer.as.slow_enhanced.crc && handle->slow_rx_callback)
-                handle->slow_rx_callback(&handle->slow_msg_buffer, handle->user_data);
+                handle->slow_rx_callback(handle, &handle->slow_msg_buffer, handle->user_data);
         }
         break;
     
@@ -157,7 +157,7 @@ void SENTRx_InputCaptureCallback(SENTRxHandle_t *const handle) {
                     if(SENT_calc_crc(&msg) == msg.crc){
                         SENTRx_SlowChannelFSM(handle, msg.status_nibble);
                         if(handle->rx_callback)
-                            handle->rx_callback(&msg, handle->user_data);
+                            handle->rx_callback(handle, &msg, handle->user_data);
                     }
                 }
 
