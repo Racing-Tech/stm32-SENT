@@ -21,6 +21,10 @@
 /** @brief Maximum tick unit duration in milliseconds. */
 #define SENTRX_MAX_TICK_UNIT_MS (SENT_MAX_TICK_UNIT_MS*(1+SENTRX_TICK_TOLERANCE))
 
+typedef struct SENTRxHandle SENTRxHandle_t;
+typedef void (*SENTRxCallback_t)(SENTRxHandle_t *const handle, SENTMsg_t *const msg, void *user_data);
+typedef void (*SENTRxSlowCallback_t)(SENTRxHandle_t *const handle, SENTSlowMsg_t *const msg, void *user_data);
+
 /** @brief SENT receiver state machine states. */
 typedef enum {
     SENTRX_STATE_SYNC,   /**< Synchronization state */
