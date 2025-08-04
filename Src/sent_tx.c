@@ -140,8 +140,9 @@ void SENTTx_AutoReloadCallback(SENTTxHandle_t *const handle) {
     }
 
     if(handle->base.index == 0) {
-        if(handle->slow_msg_source)
+        if(handle->slow_msg_source) {
             SENTTx_SlowChannelFSM(handle, &handle->msg_buffer, handle->slow_msg_source);
+        }
             
         _load_dma_buf(handle);
 

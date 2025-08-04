@@ -27,6 +27,7 @@
 #define SENT_CRC6_SEED 0x15
 
 #define SENT_MAX_NIBBLES 8
+#define SENT_TICKS_LEN   (SENT_MAX_NIBBLES + 4)
 
 #define SENT_NIBBLE_MASK(data)  ((data) & 0x0f)
 #define SENT_STATUS_MASK(status)  ((status) & 0x03)
@@ -34,6 +35,7 @@
 #define SENT_TIM_TO_TICKS(ticks, unit) ((uint32_t)roundf((float)(ticks) / (unit)))
 
 typedef enum {SENT_READY, SENT_TX, SENT_RX, SENT_NOT_READY} SENTHandleStatus_t;
+typedef enum {SENT_2007 = 1, SENT_2008 = 2, SENT_2010 = 3, SENT_2016 = 4} SENTProtocolVersion_t;
 typedef enum {SENT_SLOWTYPE_SHORT, SENT_SLOWTYPE_ENHANCED12, SENT_SLOWTYPE_ENHANCED16} SENTSlowMsgType_t;
 typedef enum {SENT_SLOW_IDLE, SENT_SLOW_RX, SENT_SLOW_RX_SHORT, SENT_SLOW_RX_ENHANCED, SENT_SLOW_RX_ENHANCED_12, SENT_SLOW_RX_ENHANCED_16, SENT_SLOW_TX} SENTSlowStatus_t;
 
@@ -61,7 +63,7 @@ typedef struct {
 } SENTSlowMsg_t;
 
 typedef struct {
-    uint32_t ticks[SENT_MAX_NIBBLES+4];
+    uint32_t ticks[SENT_TICKS_LEN];
     uint8_t length;
 } SENTPhysMsg_t;
 
@@ -72,6 +74,7 @@ typedef struct {
     uint16_t message_tick_len;
     uint8_t data_length;
     double tick_unit_time;
+    SENTProtocolVersion_t version;
 } SENTHandleInit_t;
 
 typedef struct {
@@ -85,6 +88,7 @@ typedef struct {
     SENTSlowStatus_t slow_channel_status;
     uint8_t slow_channel_index;
     uint32_t tim_to_tick_ratio;
+    SENTProtocolVersion_t version;
 } SENTHandle_t;
 
 /**
@@ -104,7 +108,7 @@ uint8_t SENT_init(SENTHandle_t *const handle, SENTHandleInit_t *const init);
  * @param data_nibbles Pointer to the data nibbles array.
  * @param data_length Number of data nibbles.
  */
-void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length);
+void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length, SENTProtocolVersion_t version);
 
 /**
  * @brief Calculates the CRC for a SENT message.
@@ -112,7 +116,7 @@ void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const d
  * @param msg Pointer to the SENT message structure.
  * @return The calculated CRC value.
  */
-uint8_t SENT_calc_crc(SENTMsg_t *const msg);
+uint8_t SENT_calc_crc(SENTMsg_t *const msg, SENTProtocolVersion_t version);
 
 /**
  * @brief Calculates the CRC for a SENT slow message.
@@ -120,7 +124,7 @@ uint8_t SENT_calc_crc(SENTMsg_t *const msg);
  * @param msg Pointer to the SENT slow message structure.
  * @return The calculated CRC value.
  */
-uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg);
+uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg, SENTProtocolVersion_t version);
 
 /**
  * @brief Encodes a SENT message into a physical format.

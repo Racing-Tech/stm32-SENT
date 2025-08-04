@@ -7,14 +7,16 @@ const uint8_t crc6_table[] = {0, 25, 50, 43, 61, 36, 15, 22, 35, 58, 17, 8, 30, 
                       62, 39, 12, 21, 3, 26, 49, 40, 29, 4, 47, 54, 32, 57, 18, 11,
                       33, 56, 19, 10, 28, 5, 46, 55, 2, 27, 48, 41, 63, 38, 13, 20};
 
-uint8_t SENT_calc_crc4_raw(uint8_t *const msg, uint8_t len) {
+uint8_t SENT_calc_crc4_raw(uint8_t *const msg, uint8_t len, SENTProtocolVersion_t version) {
     uint8_t crc = SENT_CRC4_SEED;
 
     for(uint8_t i=0; i<len; ++i) {
         crc = msg[i] ^ crc4_table[crc]; /* XOR-in the next input byte */
     }
 
-    crc = 0x00 ^ crc4_table[crc];
+    if((version == SENT_2010) || (version == SENT_2016)) {
+        crc = 0x00 ^ crc4_table[crc];
+    }
 
     return crc & 0x0F;
 }
@@ -31,10 +33,10 @@ uint8_t SENT_calc_crc6_raw(uint8_t *const msg, uint8_t len) {
     return crc & 0x3F;
 }
 
-uint8_t SENT_calc_crc(SENTMsg_t *const msg) {
-    return SENT_calc_crc4_raw(msg->data_nibbles, msg->data_length);
+uint8_t SENT_calc_crc(SENTMsg_t *const msg, SENTProtocolVersion_t version) {
+    return SENT_calc_crc4_raw(msg->data_nibbles, msg->data_length, version);
 }
-uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg) {
+uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg, SENTProtocolVersion_t version) {
     uint8_t tmp[4] = {0};
 
     switch (msg->type)
@@ -43,7 +45,7 @@ uint8_t SENT_calc_crc_slow(SENTSlowMsg_t *const msg) {
         tmp[0] = msg->as.slow_short.id;
         tmp[1] = msg->as.slow_short.data >> 4;
         tmp[2] = msg->as.slow_short.data & 0xF;
-        return SENT_calc_crc4_raw(tmp, 3);
+        return SENT_calc_crc4_raw(tmp, 3, version);
     case SENT_SLOWTYPE_ENHANCED12:
     case SENT_SLOWTYPE_ENHANCED16:
         uint8_t bit;
@@ -90,6 +92,7 @@ uint8_t SENT_init(SENTHandle_t *const handle, SENTHandleInit_t *const init) {
     handle->has_pause = init->has_pause;
     handle->message_tick_len = init->message_tick_len;
     handle->nibble_count = init->data_length + (init->has_pause ? 4 : 3);
+    handle->version = init->version;
 
     if(handle->tim_to_tick_ratio == 0)
         handle->tim_to_tick_ratio = 1;
@@ -97,7 +100,7 @@ uint8_t SENT_init(SENTHandle_t *const handle, SENTHandleInit_t *const init) {
     return 1;
 }
 
-void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length) {
+void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const data_nibbles, uint8_t data_length, SENTProtocolVersion_t version) {
     if(msg == NULL)
         return;
 
@@ -107,7 +110,7 @@ void SENT_msg_init(SENTMsg_t *const msg, uint8_t status_nibble, uint8_t *const d
     msg->status_nibble = status_nibble;
     memcpy(msg->data_nibbles, data_nibbles, data_length);
     msg->data_length = data_length;
-    msg->crc = SENT_calc_crc(msg);
+    msg->crc = SENT_calc_crc(msg, version);
 }
 
 uint16_t SENT_msg_get_ticks(SENTMsg_t *const msg) {
@@ -137,7 +140,7 @@ void SENT_decodePhysMsg(SENTHandle_t *const handle, SENTMsg_t *const dest, SENTP
     dest->status_nibble = SENT_TIM_TO_TICKS(src->ticks[1], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;
 
     dest->data_length = src->length - 3;
-    
+
     for(uint8_t i=0; i<dest->data_length; ++i) {
         dest->data_nibbles[i] = SENT_TIM_TO_TICKS(src->ticks[i+2], tim_to_tick_ratio) - SENT_MIN_NIBBLE_TICK_COUNT;
     }
